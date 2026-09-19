@@ -60,3 +60,26 @@ cd dist && python3 -m http.server 8899   # 本地预览
 
 验证方法：推一个改动 `dist/` 的 commit，等构建完成，
 `fetch('https://blog.vincentg.net/')` 看内容有没有变。
+
+## 批量导入历史文章
+
+文章列表拿不到公开接口，必须登录公众号后台。流程：
+
+1. 浏览器面板打开 `https://mp.weixin.qq.com/`，**让用户扫码**（不要碰凭据）
+2. 登录后 URL 里有 `token`，同源 fetch 这个接口翻页：
+
+   `/cgi-bin/appmsgpublish?sub=list&search_field=null&begin=<N>&count=20&query=&fakeid=&type=101_1&free_publish_type=1&sub_action=list_ex&token=<token>&lang=zh_CN&f=json&ajax=1`
+
+   返回的 `publish_page` 是 JSON 字符串，里面 `publish_list[].publish_info`
+   又是 JSON 字符串，其中 `appmsgex[]` 才有 `title` / `link` / `create_time`。
+   一次群发可能含多篇，所以条数 ≠ 文章数。
+3. 链接写进一个文本文件，`batch.py <文件>` 跑。
+
+截图传不到用户那边，要给用户看东西（比如登录二维码）必须用 SendUserFile 发文件。
+
+## 图片扩展名按内容定，不按 URL
+
+微信正文里的装饰图标是 SVG，但 URL 上看不出格式。只按 URL 猜会默认 `.jpg`，
+静态托管按扩展名发 `image/jpeg`，浏览器拿到 SVG 内容就裂图。
+`wxparse.sniff_ext` 按文件头嗅探真实格式，`download_images` 据此纠正扩展名
+并把改名回写进正文和封面字段。别退回只看 URL 的做法。
