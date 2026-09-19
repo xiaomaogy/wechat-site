@@ -85,3 +85,47 @@ def test_build_clears_stale_output(tmp_path):
     build.build(PROJECT_ROOT, content_root=content, dist_root=dist)
 
     assert not (dist / "stale.html").exists()
+
+
+def test_index_lists_articles_grouped_by_date(tmp_path):
+    content = tmp_path / "content"
+    dist = tmp_path / "dist"
+    make_article(content, "2026-08-02-old", "四种创造价值的方式", "2026-08-02")
+    make_article(content, "2025-09-07-new", "Vipassana 10日冥想营", "2025-09-07")
+
+    build.build(PROJECT_ROOT, content_root=content, dist_root=dist)
+    html = (dist / "index.html").read_text(encoding="utf-8")
+
+    assert "高小猫" in html
+    assert "一个我用来向自己和向世界解释为什么的地方" in html
+    assert "2篇原创内容" in html
+    assert "8月2日" in html or "今天" in html
+    assert html.index("四种创造价值的方式") < html.index("Vipassana 10日冥想营")
+    assert 'href="p/2026-08-02-old/"' in html
+    assert 'src="p/2026-08-02-old/images/c.jpg"' in html
+
+
+def test_index_handles_article_without_cover(tmp_path):
+    content = tmp_path / "content"
+    dist = tmp_path / "dist"
+    out = make_article(content, "2026-01-01-nocover", "无封面", "2026-01-01")
+    meta = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+    meta["cover"] = ""
+    (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+
+    build.build(PROJECT_ROOT, content_root=content, dist_root=dist)
+    html = (dist / "index.html").read_text(encoding="utf-8")
+
+    assert "无封面" in html
+    assert "<img" not in html.split('class="cards"')[1]
+
+
+def test_index_escapes_titles(tmp_path):
+    content = tmp_path / "content"
+    dist = tmp_path / "dist"
+    make_article(content, "2026-02-02-esc", "A & B <script>", "2026-02-02")
+
+    build.build(PROJECT_ROOT, content_root=content, dist_root=dist)
+    html = (dist / "index.html").read_text(encoding="utf-8")
+
+    assert "A &amp; B &lt;script&gt;" in html

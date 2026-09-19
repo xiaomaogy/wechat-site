@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from datetime import date
+from html import escape
 from pathlib import Path
 from string import Template
 
@@ -56,6 +57,41 @@ def render_article(article: dict, config: dict, template: str) -> str:
     )
 
 
+def _card_html(article: dict, label: str) -> str:
+    href = f"p/{article['slug']}/"
+    title = escape(article["title"])
+    cover = ""
+    if article.get("cover"):
+        cover = (
+            f'      <img class="card-cover" loading="lazy" '
+            f'src="{href}images/{article["cover"]}" alt="{title}" />\n'
+        )
+    return (
+        f'    <a class="card" href="{href}">\n'
+        f"{cover}"
+        f'      <div class="card-text">\n'
+        f'        <h2 class="card-title">{title}</h2>\n'
+        f'        <p class="card-date">{escape(label)}</p>\n'
+        f"      </div>\n"
+        f"    </a>"
+    )
+
+
+def render_index(articles: list[dict], config: dict, template: str) -> str:
+    today = date.today()
+    cards = "\n".join(
+        _card_html(article, date_label(article["published"], today)) for article in articles
+    )
+    return Template(template).safe_substitute(
+        site_name=escape(config["site_name"]),
+        region=escape(config["region"]),
+        bio=escape(config["bio"]),
+        avatar=config["avatar"],
+        count=len(articles),
+        cards=cards,
+    )
+
+
 def build(
     project_root: Path,
     content_root: Path | None = None,
@@ -74,6 +110,7 @@ def build(
 
     articles = load_articles(content_root)
     article_template = (templates / "article.html").read_text(encoding="utf-8")
+    index_template = (templates / "index.html").read_text(encoding="utf-8")
 
     for article in articles:
         out_dir = dist_root / "p" / article["slug"]
@@ -84,6 +121,10 @@ def build(
         images = article["dir"] / "images"
         if images.is_dir():
             shutil.copytree(images, out_dir / "images")
+
+    (dist_root / "index.html").write_text(
+        render_index(articles, config, index_template), encoding="utf-8"
+    )
 
     print(f"✓ 生成 {len(articles)} 篇文章 → {dist_root}")
 
