@@ -129,3 +129,16 @@ def test_index_escapes_titles(tmp_path):
     html = (dist / "index.html").read_text(encoding="utf-8")
 
     assert "A &amp; B &lt;script&gt;" in html
+
+
+def test_pages_declare_a_favicon(tmp_path):
+    content = tmp_path / "content"
+    dist = tmp_path / "dist"
+    make_article(content, "2026-03-03-fav", "标题", "2026-03-03")
+
+    build.build(PROJECT_ROOT, content_root=content, dist_root=dist)
+
+    index = (dist / "index.html").read_text(encoding="utf-8")
+    article = (dist / "p" / "2026-03-03-fav" / "index.html").read_text(encoding="utf-8")
+    assert 'rel="icon" href="static/avatar.svg"' in index
+    assert 'rel="icon" href="../../static/avatar.svg"' in article
