@@ -24,3 +24,14 @@ cd dist && python3 -m http.server 8899   # 本地预览
 ## 设计与计划
 
 `docs/superpowers/specs/` 和 `docs/superpowers/plans/`，动结构之前先看。
+
+## 部署形态（容易搞错）
+
+这个站部署成 **Worker**，不是 Pages。Cloudflare 把两者合并进「Workers & Pages」，
+新建时默认走 Worker + 静态资源。功能一样，但后台路径不同：
+
+- Worker URL：https://wechat-site.vincentgao99.workers.dev
+- 自定义域：https://blog.vincentg.net
+- 绑域名的位置是 **Worker → Settings → Domains & Routes → Add → Custom domain**，
+  不是 Pages 的 Custom domains 页面
+- 静态资源目录是 `dist`
