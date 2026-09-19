@@ -71,7 +71,21 @@ def _save_debug(url: str, html: str) -> Path:
     return path
 
 
-def ingest(url: str, content_root: Path) -> Path:
+def existing_dir(url: str, content_root: Path) -> Path | None:
+    """这篇抓过了吗？slug 末尾就是微信短链 id，拿它找，不用先联网取日期。"""
+    if not content_root.is_dir():
+        return None
+    matches = sorted(content_root.glob(f"*-{wxparse.wx_id(url)}"))
+    return matches[0] if matches else None
+
+
+def ingest(url: str, content_root: Path, skip_existing: bool = False) -> Path:
+    if skip_existing:
+        already = existing_dir(url, content_root)
+        if already is not None:
+            print(f"· 跳过（已有） {already.name}")
+            return already
+
     html = fetch(url)
     try:
         article = wxparse.parse(html)
@@ -121,12 +135,17 @@ def ingest(url: str, content_root: Path) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="抓取微信公众号文章到 content/")
     parser.add_argument("urls", nargs="+", help="mp.weixin.qq.com/s/... 链接")
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="content/ 里已有的就跳过，不重新抓",
+    )
     args = parser.parse_args(argv)
 
     failures = 0
     for url in args.urls:
         try:
-            ingest(url, CONTENT_ROOT)
+            ingest(url, CONTENT_ROOT, skip_existing=args.skip_existing)
         except Exception as error:  # noqa: BLE001 — 一篇失败不该中断其余
             print(f"✗ {url}: {error}", file=sys.stderr)
             failures += 1

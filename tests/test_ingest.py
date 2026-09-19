@@ -87,3 +87,35 @@ def test_ingest_saves_raw_html_when_page_unusable(tmp_path, monkeypatch):
     saved = list(debug_dir.glob("*.html"))
     assert len(saved) == 1
     assert "该内容已被发布者删除" in saved[0].read_text(encoding="utf-8")
+
+
+def test_existing_dir_finds_article_by_wx_id(tmp_path, offline):
+    out = ingest.ingest(URL, tmp_path)
+    assert ingest.existing_dir(URL, tmp_path) == out
+
+
+def test_existing_dir_returns_none_when_absent(tmp_path):
+    assert ingest.existing_dir(URL, tmp_path) is None
+
+
+def test_ingest_skips_existing_without_fetching(tmp_path, monkeypatch, offline):
+    first = ingest.ingest(URL, tmp_path)
+    (first / "marker.txt").write_text("留着", encoding="utf-8")
+
+    def boom(url):
+        raise AssertionError("已经抓过了，不该再请求一次")
+
+    monkeypatch.setattr(ingest, "fetch", boom)
+    again = ingest.ingest(URL, tmp_path, skip_existing=True)
+
+    assert again == first
+    assert (first / "marker.txt").exists()
+
+
+def test_ingest_refetches_by_default(tmp_path, offline):
+    first = ingest.ingest(URL, tmp_path)
+    (first / "marker.txt").write_text("会被删", encoding="utf-8")
+
+    ingest.ingest(URL, tmp_path)
+
+    assert not (first / "marker.txt").exists()
