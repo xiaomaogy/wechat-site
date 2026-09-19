@@ -52,7 +52,7 @@ Cloudflare Pages 不跑任何构建命令，直接 serve。解析逻辑单独放
   - `wxparse.wx_id(url: str) -> str`
   - `wxparse.slug_for(url: str, published: str) -> str`
 
-- [ ] **Step 1: 建目录与配置文件**
+- [x] **Step 1: 建目录与配置文件**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -100,7 +100,7 @@ pytest>=8.0
 }
 ```
 
-- [ ] **Step 2: 建 venv 并装依赖**
+- [x] **Step 2: 建 venv 并装依赖**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -111,7 +111,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
 
 Expected: 打印 `deps ok`
 
-- [ ] **Step 3: 写 fixture HTML**
+- [x] **Step 3: 写 fixture HTML**
 
 `tests/fixtures/sample_article.html`：
 
@@ -142,7 +142,7 @@ Expected: 打印 `deps ok`
 </html>
 ```
 
-- [ ] **Step 4: 写失败的测试**
+- [x] **Step 4: 写失败的测试**
 
 `tests/test_wxparse.py`：
 
@@ -183,7 +183,7 @@ def test_slug_combines_date_and_id():
     assert slug == "2025-09-07-X8no6IXr1-e0GtSaYjhCGA"
 ```
 
-- [ ] **Step 5: 跑测试确认失败**
+- [x] **Step 5: 跑测试确认失败**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_wxparse.py -v
@@ -191,7 +191,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: FAIL，`ModuleNotFoundError: No module named 'wxparse'`
 
-- [ ] **Step 6: 写 wxparse.py 的字段提取部分**
+- [x] **Step 6: 写 wxparse.py 的字段提取部分**
 
 ```python
 """解析微信公众号文章 HTML 的纯函数集合。这个模块不联网。"""
@@ -267,7 +267,7 @@ def slug_for(url: str, published: str) -> str:
     return f"{published}-{wx_id(url)}"
 ```
 
-- [ ] **Step 7: 跑测试确认通过**
+- [x] **Step 7: 跑测试确认通过**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_wxparse.py -v
@@ -275,7 +275,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: 5 passed
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -299,7 +299,7 @@ git commit -m "feat: 项目骨架 + 微信文章字段提取"
   - `wxparse.clean_body(node) -> tuple[str, list[str]]` — 返回（重写后的内部 HTML，按出现顺序去重的原始图片 URL 列表）
   - `wxparse.parse(html: str) -> ParsedArticle`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 追加到 `tests/test_wxparse.py`：
 
@@ -363,7 +363,7 @@ def test_parse_raises_when_body_missing():
         wxparse.parse(html)
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_wxparse.py -v
@@ -371,7 +371,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: FAIL，`AttributeError: module 'wxparse' has no attribute 'image_filename'`
 
-- [ ] **Step 3: 实现清洗与解析**
+- [x] **Step 3: 实现清洗与解析**
 
 在 `wxparse.py` 顶部 import 区加 `import hashlib`，然后追加：
 
@@ -445,7 +445,7 @@ def parse(html: str) -> ParsedArticle:
     )
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_wxparse.py -v
@@ -453,7 +453,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: 14 passed
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -479,7 +479,7 @@ git commit -m "feat: 正文清洗与图片本地化重写"
   - `meta.json` 结构：`{"slug", "title", "author", "published", "source_url", "cover", "fetched_at"}`
     其中 `cover` 是 `images/` 下的文件名，取不到封面时为 `""`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 `tests/test_ingest.py`：
 
@@ -575,7 +575,7 @@ def test_ingest_saves_raw_html_when_page_unusable(tmp_path, monkeypatch):
     assert "该内容已被发布者删除" in saved[0].read_text(encoding="utf-8")
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_ingest.py -v
@@ -583,7 +583,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: FAIL，`ModuleNotFoundError: No module named 'ingest'`
 
-- [ ] **Step 3: 实现 ingest.py**
+- [x] **Step 3: 实现 ingest.py**
 
 ```python
 """把一篇微信公众号文章抓下来，落成 content/<slug>/ 三件套。"""
@@ -725,7 +725,7 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/ -v
@@ -733,7 +733,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: 20 passed
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -762,7 +762,7 @@ git commit -m "feat: ingest 抓取、下图、写盘"
   - `build.build(project_root: Path, content_root: Path | None = None, dist_root: Path | None = None) -> None`
   - 文章页产物路径：`dist/p/<slug>/index.html`，图片在 `dist/p/<slug>/images/`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 `tests/test_build.py`：
 
@@ -856,7 +856,7 @@ def test_build_clears_stale_output(tmp_path):
     assert not (dist / "stale.html").exists()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_build.py -v
@@ -864,7 +864,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: FAIL，`ModuleNotFoundError: No module named 'build'`
 
-- [ ] **Step 3: 写文章页模板**
+- [x] **Step 3: 写文章页模板**
 
 `templates/article.html`：
 
@@ -895,7 +895,7 @@ $body
 </html>
 ```
 
-- [ ] **Step 4: 写 build.py**
+- [x] **Step 4: 写 build.py**
 
 ```python
 """把 content/ 下的文章全量渲染成 dist/。"""
@@ -992,7 +992,7 @@ if __name__ == "__main__":
     build(PROJECT_ROOT)
 ```
 
-- [ ] **Step 5: 写 style.css 的基础与文章页部分**
+- [x] **Step 5: 写 style.css 的基础与文章页部分**
 
 `static/style.css`：
 
@@ -1056,7 +1056,7 @@ a { color: var(--link); text-decoration: none; }
 }
 ```
 
-- [ ] **Step 6: 跑测试确认通过**
+- [x] **Step 6: 跑测试确认通过**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/ -v
@@ -1064,7 +1064,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: 26 passed
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1089,7 +1089,7 @@ git commit -m "feat: build 渲染引擎与文章页"
   - `build.render_index(articles: list[dict], config: dict, template: str) -> str`
   - 产物 `dist/index.html`
 
-- [ ] **Step 1: 写失败的测试**
+- [x] **Step 1: 写失败的测试**
 
 追加到 `tests/test_build.py`：
 
@@ -1138,7 +1138,7 @@ def test_index_escapes_titles(tmp_path):
     assert "A &amp; B &lt;script&gt;" in html
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/test_build.py -v
@@ -1146,7 +1146,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: FAIL，`FileNotFoundError` 找不到 `templates/index.html`
 
-- [ ] **Step 3: 写目录页模板**
+- [x] **Step 3: 写目录页模板**
 
 `templates/index.html`：
 
@@ -1178,7 +1178,7 @@ $cards
 </html>
 ```
 
-- [ ] **Step 4: 写头像 SVG**
+- [x] **Step 4: 写头像 SVG**
 
 `static/avatar.svg`（占位；用户可以直接换成 `static/avatar.png` 并改 `site.config.json` 的 `avatar` 字段）：
 
@@ -1193,7 +1193,7 @@ $cards
 </svg>
 ```
 
-- [ ] **Step 5: 在 build.py 里实现目录页**
+- [x] **Step 5: 在 build.py 里实现目录页**
 
 在 `build.py` 的 import 区加 `from html import escape`，然后在 `render_article` 之后追加：
 
@@ -1249,7 +1249,7 @@ def render_index(articles: list[dict], config: dict, template: str) -> str:
 
 （放在文章 `for` 循环之后、`print(...)` 之前）
 
-- [ ] **Step 6: 追加目录页样式**
+- [x] **Step 6: 追加目录页样式**
 
 追加到 `static/style.css` 末尾：
 
@@ -1284,7 +1284,7 @@ def render_index(articles: list[dict], config: dict, template: str) -> str:
 .card-date { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
 ```
 
-- [ ] **Step 7: 跑测试确认通过**
+- [x] **Step 7: 跑测试确认通过**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python -m pytest tests/ -v
@@ -1292,7 +1292,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 
 Expected: 29 passed
 
-- [ ] **Step 8: 提交**
+- [x] **Step 8: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1314,7 +1314,7 @@ git commit -m "feat: 仿公众号主页的目录页"
 - Consumes: `ingest.main`（Task 3）、`build.build`（Task 4、5）
 - Produces: 仓库里可直接部署的 `dist/`
 
-- [ ] **Step 1: 抓 Vipassana 那篇**
+- [x] **Step 1: 抓 Vipassana 那篇**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python ingest.py "https://mp.weixin.qq.com/s/X8no6IXr1-e0GtSaYjhCGA"
@@ -1326,7 +1326,7 @@ Expected: 打印 `✓ Vipassana 10日冥想营 → .../content/<slug>`，无 WAR
 如果抓取报 `ArticleUnavailable`，按 `tmp/<id>.html` 里的实际内容判断是被删、需验证、
 还是选择器变了，再决定改 `wxparse` 还是请用户手工提供原文。
 
-- [ ] **Step 2: 检查抓下来的东西**
+- [x] **Step 2: 检查抓下来的东西**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1337,7 +1337,7 @@ grep -c "mmbiz.qpic.cn" content/*/body.html || echo "0 外链，正确"
 
 Expected: meta 字段齐全、images 目录非空、body.html 里 `mmbiz.qpic.cn` 计数为 0。
 
-- [ ] **Step 3: 生成 dist 并起本地服务**
+- [x] **Step 3: 生成 dist 并起本地服务**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/python build.py
@@ -1349,7 +1349,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site && .venv/bin/pytho
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site/dist && python3 -m http.server 8899
 ```
 
-- [ ] **Step 4: 用浏览器工具核对**
+- [x] **Step 4: 用浏览器工具核对**
 
 用 `mcp__Claude_Browser__navigate` 打开 `http://localhost:8899/`，
 先 `resize_window` 到 `preset: "mobile"`，截图；再点进文章页截图。逐项确认：
@@ -1362,7 +1362,7 @@ cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site/dist && python3 -m
 
 任何一条不过就改 CSS 或模板，改完重跑 `build.py` 再看。
 
-- [ ] **Step 5: 写 README.md 和 CLAUDE.md**
+- [x] **Step 5: 写 README.md 和 CLAUDE.md**
 
 `README.md`：
 
@@ -1427,7 +1427,7 @@ cd dist && python3 -m http.server 8899   # 本地预览
 ```
 ```
 
-- [ ] **Step 6: 停掉本地服务并提交**
+- [x] **Step 6: 停掉本地服务并提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1446,7 +1446,7 @@ git commit -m "feat: 抓取首篇文章并生成 dist，补 README/CLAUDE"
 - Consumes: Task 6 产出的完整仓库（含 `dist/`）
 - Produces: 线上站点 `https://blog.vincentg.net`
 
-- [ ] **Step 1: 确保 git 用 HTTPS**
+- [x] **Step 1: 确保 git 用 HTTPS**
 
 ```bash
 gh config set git_protocol https
@@ -1455,7 +1455,7 @@ gh config get git_protocol
 
 Expected: 打印 `https`
 
-- [ ] **Step 2: 建仓库并推上去**
+- [x] **Step 2: 建仓库并推上去**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1465,7 +1465,7 @@ git remote -v
 
 Expected: `origin` 是 `https://github.com/xiaomaogy/wechat-site.git`，push 成功。
 
-- [ ] **Step 3: 确认 dist 真的进了仓库**
+- [x] **Step 3: 确认 dist 真的进了仓库**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
@@ -1476,7 +1476,7 @@ git ls-files dist | wc -l
 Expected: 至少包含 `dist/index.html`、`dist/static/style.css` 和文章页；数量大于 5。
 如果是 0，说明 `.gitignore` 误伤了，必须修掉再推。
 
-- [ ] **Step 4: 给用户 Cloudflare 后台的操作指引**
+- [x] **Step 4: 给用户 Cloudflare 后台的操作指引**
 
 把下面这段原样给用户，这几步只能他自己在网页上点：
 
@@ -1492,7 +1492,7 @@ Expected: 至少包含 `dist/index.html`、`dist/static/style.css` 和文章页�
 > 5. 进这个 Pages 项目 → **Custom domains** → **Set up a custom domain** → 填 `blog.vincentg.net` → 确认
 >    （vincentg.net 已经在你的 Cloudflare 账号下，DNS 记录会自动加）
 
-- [ ] **Step 5: 验收线上站点**
+- [x] **Step 5: 验收线上站点**
 
 等用户说配好之后：
 
@@ -1505,7 +1505,7 @@ Expected: `HTTP/2 200`
 再用 `mcp__Claude_Browser__navigate` 打开 `https://blog.vincentg.net`，截图确认：
 目录页正常、点进文章正文图片全部显示（线上图片走的是自己域名，这里是防盗链问题的最终验证）。
 
-- [ ] **Step 6: 更新根目录 CLAUDE.md 的项目表**
+- [x] **Step 6: 更新根目录 CLAUDE.md 的项目表**
 
 在 `/Users/vincentgao/Desktop/claude_code/CLAUDE.md` 的「💻 projects/」表格里追加一行：
 
@@ -1513,7 +1513,7 @@ Expected: `HTTP/2 200`
 | `wechat-site/` | 微信公众号文章静态站（Cloudflare Pages，blog.vincentg.net） | 想把某篇公众号文章搬上自己的站时：`ingest.py <链接>` → `build.py` → push 即自动部署 |
 ```
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 cd /Users/vincentgao/Desktop/claude_code/projects/wechat-site
