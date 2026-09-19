@@ -153,3 +153,19 @@ def test_clean_body_drops_style_attribute_when_nothing_left():
 def test_clean_body_keeps_non_color_styles_untouched():
     article = wxparse.parse(_page('<p style="margin: 16px 0px;">正文</p>'))
     assert 'style="margin: 16px 0px;"' in article.body_html
+
+
+def test_sniff_ext_recognises_binary_formats():
+    assert wxparse.sniff_ext(b"\xff\xd8\xff\xe0 jpeg body") == "jpg"
+    assert wxparse.sniff_ext(b"\x89PNG\r\n\x1a\n body") == "png"
+    assert wxparse.sniff_ext(b"GIF89a body") == "gif"
+    assert wxparse.sniff_ext(b"RIFF\x00\x00\x00\x00WEBPVP8 ") == "webp"
+
+
+def test_sniff_ext_recognises_svg_with_and_without_prolog():
+    assert wxparse.sniff_ext(b'  <svg version="1.1" xmlns="x"></svg>') == "svg"
+    assert wxparse.sniff_ext(b'<?xml version="1.0"?>\n<svg xmlns="x"></svg>') == "svg"
+
+
+def test_sniff_ext_returns_none_when_unrecognised():
+    assert wxparse.sniff_ext(b"not an image at all") is None

@@ -132,6 +132,22 @@ def _strip_dark_colors(style: str) -> str | None:
     return ";".join(kept)
 
 
+def sniff_ext(data: bytes) -> str | None:
+    """按文件头判断真实格式。URL 猜不出扩展名时用这个纠正，认不出返回 None。"""
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:4] == b"GIF8":
+        return "gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    head = data[:200].lstrip()
+    if head[:4] == b"<svg" or (head[:5] == b"<?xml" and b"<svg" in data[:400]):
+        return "svg"
+    return None
+
+
 def clean_body(node) -> tuple[str, list[str]]:
     """去掉噪声标签，把图片指向本地 images/，返回（HTML, 原始图片 URL 列表）。"""
     for junk in node.find_all(["script", "style", "noscript"]):

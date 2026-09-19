@@ -73,6 +73,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-delay", type=float, default=MAX_DELAY)
     args = parser.parse_args(argv)
 
+    # 输出重定向到文件时 Python 会整块缓冲，后台跑就看不到进度。
+    sys.stdout.reconfigure(line_buffering=True)
+
     import time
 
     urls = read_urls(args.listing)

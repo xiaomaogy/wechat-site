@@ -10,12 +10,18 @@ FIXTURE = (Path(__file__).parent / "fixtures" / "sample_article.html").read_text
 URL = "https://mp.weixin.qq.com/s/X8no6IXr1-e0GtSaYjhCGA"
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n fake png payload"
+JPG_BYTES = b"\xff\xd8\xff\xe0 fake jpeg payload"
+
+
+def fake_bytes(url: str) -> bytes:
+    """假图的字节要和 URL 声明的格式一致，否则会触发扩展名纠正逻辑。"""
+    return PNG_BYTES if "wx_fmt=png" in url else JPG_BYTES
 
 
 @pytest.fixture
 def offline(monkeypatch):
     monkeypatch.setattr(ingest, "fetch", lambda url: FIXTURE)
-    monkeypatch.setattr(ingest, "_get_bytes", lambda url: PNG_BYTES)
+    monkeypatch.setattr(ingest, "_get_bytes", fake_bytes)
 
 
 def test_ingest_creates_slug_directory_with_three_parts(tmp_path, offline):
@@ -54,7 +60,8 @@ def test_ingest_downloads_body_images_and_cover(tmp_path, offline):
         ]
     )
     assert names == expected
-    assert (out / "images" / expected[0]).read_bytes() == PNG_BYTES
+    png_url = "https://mmbiz.qpic.cn/mmbiz_png/IMG1/640?wx_fmt=png"
+    assert (out / "images" / wxparse.image_filename(png_url)).read_bytes() == PNG_BYTES
 
 
 def test_ingest_is_idempotent(tmp_path, offline):
@@ -70,14 +77,15 @@ def test_download_images_reports_failures_without_raising(tmp_path, monkeypatch)
         raise OSError("connection reset")
 
     monkeypatch.setattr(ingest, "_get_bytes", boom)
-    failed = ingest.download_images(["https://mmbiz.qpic.cn/a/640?wx_fmt=png"], tmp_path)
+    result = ingest.download_images(["https://mmbiz.qpic.cn/a/640?wx_fmt=png"], tmp_path)
 
-    assert failed == ["https://mmbiz.qpic.cn/a/640?wx_fmt=png"]
+    assert result["failed"] == ["https://mmbiz.qpic.cn/a/640?wx_fmt=png"]
+    assert result["renamed"] == {}
 
 
 def test_ingest_saves_raw_html_when_page_unusable(tmp_path, monkeypatch):
     monkeypatch.setattr(ingest, "fetch", lambda url: "<html>该内容已被发布者删除</html>")
-    monkeypatch.setattr(ingest, "_get_bytes", lambda url: PNG_BYTES)
+    monkeypatch.setattr(ingest, "_get_bytes", fake_bytes)
     debug_dir = tmp_path / "debug"
     monkeypatch.setattr(ingest, "DEBUG_DIR", debug_dir)
 
@@ -119,3 +127,61 @@ def test_ingest_refetches_by_default(tmp_path, offline):
     ingest.ingest(URL, tmp_path)
 
     assert not (first / "marker.txt").exists()
+
+
+SVG_BYTES = b'<svg xmlns="http://www.w3.org/2000/svg"><circle r="8"/></svg>'
+ICON_URL = "https://mmbiz.qpic.cn/mmbiz/ICON/640"
+
+
+def test_download_images_corrects_extension_from_content(tmp_path, monkeypatch):
+    monkeypatch.setattr(ingest, "_get_bytes", lambda url: SVG_BYTES)
+
+    result = ingest.download_images([ICON_URL], tmp_path)
+
+    assumed = wxparse.image_filename(ICON_URL)
+    corrected = assumed.removesuffix(".jpg") + ".svg"
+    assert assumed.endswith(".jpg")
+    assert (tmp_path / corrected).read_bytes() == SVG_BYTES
+    assert not (tmp_path / assumed).exists()
+    assert result["renamed"] == {assumed: corrected}
+    assert result["failed"] == []
+
+
+def test_download_images_leaves_matching_extension_alone(tmp_path, monkeypatch):
+    monkeypatch.setattr(ingest, "_get_bytes", lambda url: b"\x89PNG\r\n\x1a\n body")
+    url = "https://mmbiz.qpic.cn/mmbiz_png/IMG/640?wx_fmt=png"
+
+    result = ingest.download_images([url], tmp_path)
+
+    assert result["renamed"] == {}
+    assert (tmp_path / wxparse.image_filename(url)).exists()
+
+
+def test_ingest_rewrites_body_when_an_image_is_renamed(tmp_path, monkeypatch):
+    page = FIXTURE.replace(
+        "https://mmbiz.qpic.cn/mmbiz_png/IMG1/640?wx_fmt=png", ICON_URL
+    )
+    monkeypatch.setattr(ingest, "fetch", lambda url: page)
+    monkeypatch.setattr(ingest, "_get_bytes", lambda url: SVG_BYTES)
+
+    out = ingest.ingest(URL, tmp_path)
+    body = (out / "body.html").read_text(encoding="utf-8")
+
+    assumed = wxparse.image_filename(ICON_URL)
+    corrected = assumed.removesuffix(".jpg") + ".svg"
+    assert f"images/{corrected}" in body
+    assert f"images/{assumed}" not in body
+
+
+def test_ingest_updates_cover_when_renamed(tmp_path, monkeypatch):
+    page = FIXTURE.replace(
+        "https://mmbiz.qpic.cn/mmbiz_jpg/COVER/640?wx_fmt=jpeg", ICON_URL
+    )
+    monkeypatch.setattr(ingest, "fetch", lambda url: page)
+    monkeypatch.setattr(ingest, "_get_bytes", lambda url: SVG_BYTES)
+
+    out = ingest.ingest(URL, tmp_path)
+    meta = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+
+    assert meta["cover"].endswith(".svg")
+    assert (out / "images" / meta["cover"]).exists()

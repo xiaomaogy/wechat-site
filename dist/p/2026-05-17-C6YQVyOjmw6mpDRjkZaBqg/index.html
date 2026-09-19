@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>在写美食推荐引擎过程中的感悟 · 高小猫</title>
+<link rel="icon" href="../../static/avatar.svg" />
+<link rel="stylesheet" href="../../static/style.css" />
+</head>
+<body>
+<main class="wrap">
+  <p class="back"><a href="../../">← 高小猫</a></p>
+  <article>
+    <h1 class="post-title">在写美食推荐引擎过程中的感悟</h1>
+    <p class="post-meta">高小猫 · 5月17日</p>
+    <div class="post-body">
+<p>今天一整天都在尝试用ai写一套美食搜索的pipeline。写了很久，感觉总是没法把自己搜索美食的方法论变成算法，自动搜索出真正好吃的东西。</p><p><br/></p><p>我的逻辑大概是这样的：</p><p><br/></p><p>在小红书上，找到真正的当地人会发问，当地人激烈讨论，最终懂吃的人会贴出，并且得到大家认可的餐厅。</p><p><br/></p><p>但是我在实现这个逻辑的时候碰到了以下问题：</p><p><br/></p><p>用ai找到这样的帖子真的很有难度。你用关键词去搜索比如“吉隆坡 美食”这样的关键词，大量的都是营销号，或者游客发的帖子。用regex可以筛掉一部分，再用llm过滤掉一部分，但是再剩下的筛选，就需要你能够猜出发帖/评论人的背景/动机了。很多东西对于人来说非常明显，对于llm来说就没有那么明显了。</p><p><br/></p><p>不过仔细想想这也是好事，要是这个方法这么容易奏效，那慢慢地广告帖子也会用这样的方式去混淆视听，那最终小红书这样的平台就不会有可用的信号了。比如现在国内的美团/大众点评，就很难通过评分找到真的好吃的饭店了。最终找好吃的地方重新又回到了口口相传的模式。</p><p style="display: none;"><mp-style-type data-value="10000"></mp-style-type></p>
+    </div>
+  </article>
+  <footer class="post-footer">
+    <a href="https://mp.weixin.qq.com/s/C6YQVyOjmw6mpDRjkZaBqg" rel="noopener">原文发表于微信公众号</a>
+  </footer>
+</main>
+</body>
+</html>

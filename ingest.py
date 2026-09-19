@@ -48,20 +48,37 @@ def _get_bytes(url: str) -> bytes:
     return response.content
 
 
-def download_images(urls: list[str], dest: Path) -> list[str]:
-    """下载图片到 dest。单张失败只记录不中断，返回失败的 URL 列表。"""
+def download_images(urls: list[str], dest: Path) -> dict:
+    """下载图片到 dest。单张失败只记录不中断。
+
+    文件名是按 URL 猜的，猜不出格式时会默认 .jpg；微信正文里的装饰图标其实是
+    SVG，存成 .jpg 会让浏览器按 image/jpeg 解析而裂图。所以下载完按文件头纠正
+    扩展名，并把改名回报给调用方去改正文引用。
+
+    返回 {"failed": [url...], "renamed": {旧文件名: 新文件名}}。
+    """
     dest.mkdir(parents=True, exist_ok=True)
     failed: list[str] = []
+    renamed: dict[str, str] = {}
+
     for url in urls:
-        target = dest / wxparse.image_filename(url)
-        if target.exists():
-            continue
+        assumed = wxparse.image_filename(url)
         try:
-            target.write_bytes(_get_bytes(url))
+            data = _get_bytes(url)
         except Exception as error:  # noqa: BLE001 — 单图失败不该毁掉整篇
             print(f"  WARNING 图片下载失败 {url}: {error}", file=sys.stderr)
             failed.append(url)
-    return failed
+            continue
+
+        name = assumed
+        real_ext = wxparse.sniff_ext(data)
+        if real_ext and not assumed.endswith(f".{real_ext}"):
+            name = assumed.rsplit(".", 1)[0] + f".{real_ext}"
+            renamed[assumed] = name
+
+        (dest / name).write_bytes(data)
+
+    return {"failed": failed, "renamed": renamed}
 
 
 def _save_debug(url: str, html: str) -> Path:
@@ -108,11 +125,17 @@ def ingest(url: str, content_root: Path, skip_existing: bool = False) -> Path:
         if article.cover_url not in image_urls:
             image_urls.append(article.cover_url)
 
-    failed = download_images(image_urls, images_dir)
+    downloaded = download_images(image_urls, images_dir)
+    failed = downloaded["failed"]
     if cover_name and article.cover_url in failed:
         cover_name = ""
 
-    (out_dir / "body.html").write_text(article.body_html, encoding="utf-8")
+    body_html = article.body_html
+    for old_name, new_name in downloaded["renamed"].items():
+        body_html = body_html.replace(f"images/{old_name}", f"images/{new_name}")
+    cover_name = downloaded["renamed"].get(cover_name, cover_name)
+
+    (out_dir / "body.html").write_text(body_html, encoding="utf-8")
     meta = {
         "slug": slug,
         "title": article.title,
