@@ -4,8 +4,9 @@
 
 ## 铁律
 
-- `dist/` 是生成产物但**必须提交**——CF Pages 不跑构建，直接 serve 仓库里的 `dist/`。
-- 改了 `content/`、`templates/`、`static/`、`site.config.json` 之后必须重跑 `build.py`。
+- `dist/` **不进 git**。部署时 wrangler 按 `wrangler.jsonc` 的 `build.command`
+  在云端跑 `python3 build.py` 现场生成。图片进仓库一份就够，两份的话全量要 1.2G，
+  而 git 历史删不掉。本地预览才需要自己跑 `build.py`。
 - 图片一律本地化。`body.html` 里出现 `mmbiz.qpic.cn` 就是 bug（微信图床有防盗链）。
 - 正文的内联 `style` 属性不要动，微信排版全靠它。唯一的例外是亮度过低的 `color`
   声明（`_strip_dark_colors`），那是为了深色模式可读，别把这个逻辑去掉。
@@ -34,11 +35,12 @@ cd dist && python3 -m http.server 8899   # 本地预览
 - 自定义域：https://blog.vincentg.net
 - 绑域名的位置是 **Worker → Settings → Domains & Routes → Add → Custom domain**，
   不是 Pages 的 Custom domains 页面
-- 静态资源目录是 `dist`
+- 静态资源目录是 `dist`，由 `wrangler.jsonc` 的 `build.command` 在部署时生成
 
 部署配置在 `wrangler.jsonc`（`assets.directory = ./dist`）。两条部署路径：
 
-- **接了 Git**：push 到 `main` → Workers Builds 跑 `npx wrangler deploy`
+- **接了 Git**：push 到 `main` → Workers Builds 跑 `npx wrangler deploy`，
+  wrangler 先执行 `build.command` 再上传
 - **手动兜底**：本地 `npx wrangler deploy`（首次会开浏览器让你授权 Cloudflare）
 
 改配置后可以用 `npx wrangler deploy --dry-run` 校验，这条不需要登录。
@@ -58,7 +60,7 @@ cd dist && python3 -m http.server 8899   # 本地预览
    Repository access 改成 All repositories（或把本仓库加进白名单）
 3. 有记录但失败 → 去 Worker 的 Deployments 页看构建日志
 
-验证方法：推一个改动 `dist/` 的 commit，等构建完成，
+验证方法：推一个会改变页面输出的 commit（改 `content/` 或 `templates/`），等构建完成，
 `fetch('https://blog.vincentg.net/')` 看内容有没有变。
 
 ## 批量导入历史文章

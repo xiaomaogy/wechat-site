@@ -6,18 +6,18 @@
 
 ```bash
 .venv/bin/python ingest.py "https://mp.weixin.qq.com/s/xxxxxx"
-.venv/bin/python build.py
 git add -A && git commit -m "add: 文章标题" && git push
 ```
 
-推上去 Cloudflare Pages 自动部署，一两分钟后生效。
+推上去 Cloudflare 自动部署，一两分钟后生效。
+`build.py` 不用手动跑——部署时 wrangler 会在云端执行它。
 
 ## 结构
 
 - `ingest.py` — 抓文章、下载全部图片到本地、写 `content/<slug>/`
 - `wxparse.py` — 不联网的纯解析函数（字段提取、正文清洗、图片重写）
 - `build.py` — `content/` → `dist/` 全量重新生成
-- `dist/` — 生成产物，就是线上内容，**要提交进仓库**
+- `dist/` — 生成产物，**不进 git**，部署时在云端现场生成（图片否则要存两份）
 
 ## 抓取时会自动做的两件清洗
 
@@ -48,5 +48,11 @@ git add -A && git commit -m "add: 文章标题" && git push
 本地预览：
 
 ```bash
-cd dist && python3 -m http.server 8899
+.venv/bin/python build.py && cd dist && python3 -m http.server 8899
+```
+
+批量导入（清单每行一个链接，可重复跑，已抓过的自动跳过）：
+
+```bash
+.venv/bin/python batch.py tmp/articles.txt
 ```

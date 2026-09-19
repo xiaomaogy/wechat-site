@@ -1,9 +1,16 @@
 {
   // 纯静态站：没有 Worker 脚本，只把 dist/ 作为静态资源发布。
-  // Cloudflare 后台 Worker → Settings → Build 里连上 Git 之后，
-  // 每次 push 到 main 会跑 `npx wrangler deploy`，读的就是这个文件。
+  //
+  // dist/ 不进 git（图片会存两份，全量 200 篇要 1.2G，而 git 历史删不掉），
+  // 改成部署前现场生成。build.command 由 wrangler 在 deploy 之前执行，
+  // 所以这条声明在仓库里，不用去 Cloudflare 后台填 Build command。
+  //
+  // build.py 只用 Python 标准库，不装任何依赖。
   "name": "wechat-site",
   "compatibility_date": "2026-09-19",
+  "build": {
+    "command": "python3 build.py"
+  },
   "assets": {
     "directory": "./dist"
   }
