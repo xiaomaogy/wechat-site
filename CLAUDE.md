@@ -42,3 +42,21 @@ cd dist && python3 -m http.server 8899   # 本地预览
 - **手动兜底**：本地 `npx wrangler deploy`（首次会开浏览器让你授权 Cloudflare）
 
 改配置后可以用 `npx wrangler deploy --dry-run` 校验，这条不需要登录。
+
+## 踩过的坑：push 不触发构建
+
+症状：push 之后线上不更新，GitHub 上连 check run 都没有（失败的构建也会留记录，
+**零记录说明根本没被通知到**）。
+
+原因：Cloudflare 的 GitHub App 安装时选的是 "Only select repositories"，
+新建的仓库不在授权列表里，push 通知发不到 Cloudflare。
+
+排查顺序：
+
+1. `gh api repos/xiaomaogy/wechat-site/commits/<sha>/check-runs` —— 有没有构建记录
+2. 没有记录 → https://github.com/settings/installations → Cloudflare Workers →
+   Repository access 改成 All repositories（或把本仓库加进白名单）
+3. 有记录但失败 → 去 Worker 的 Deployments 页看构建日志
+
+验证方法：推一个改动 `dist/` 的 commit，等构建完成，
+`fetch('https://blog.vincentg.net/')` 看内容有没有变。
