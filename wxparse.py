@@ -90,10 +90,61 @@ def image_filename(url: str) -> str:
     return f"{digest}.{ext}"
 
 
+_RGB_RE = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
+_HEX_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+DARK_LUMA = 110
+
+
+def _luma(value: str) -> float | None:
+    """颜色亮度（0-255）。解析不出来返回 None。"""
+    value = value.strip()
+    match = _RGB_RE.search(value)
+    if match:
+        red, green, blue = (int(part) for part in match.groups())
+    elif _HEX_RE.match(value):
+        digits = value[1:]
+        if len(digits) == 3:
+            digits = "".join(char * 2 for char in digits)
+        red, green, blue = (int(digits[i : i + 2], 16) for i in (0, 2, 4))
+    elif value.lower() == "black":
+        red = green = blue = 0
+    else:
+        return None
+    return 0.299 * red + 0.587 * green + 0.114 * blue
+
+
+def _strip_dark_colors(style: str) -> str | None:
+    """去掉写死的深色文字色，好让深色模式下正文能读。没东西可去就返回 None。"""
+    kept: list[str] = []
+    removed = False
+    for declaration in style.split(";"):
+        if not declaration.strip():
+            continue
+        name, _, value = declaration.partition(":")
+        if name.strip().lower() == "color":
+            luma = _luma(value)
+            if luma is not None and luma < DARK_LUMA:
+                removed = True
+                continue
+        kept.append(declaration.strip())
+    if not removed:
+        return None
+    return ";".join(kept)
+
+
 def clean_body(node) -> tuple[str, list[str]]:
     """去掉噪声标签，把图片指向本地 images/，返回（HTML, 原始图片 URL 列表）。"""
     for junk in node.find_all(["script", "style", "noscript"]):
         junk.decompose()
+
+    for element in node.find_all(style=True):
+        cleaned = _strip_dark_colors(element["style"])
+        if cleaned is None:
+            continue
+        if cleaned:
+            element["style"] = cleaned
+        else:
+            del element["style"]
 
     urls: list[str] = []
     for img in node.find_all("img"):
@@ -108,6 +159,18 @@ def clean_body(node) -> tuple[str, list[str]]:
         img["loading"] = "lazy"
 
     return node.decode_contents(), urls
+
+
+def _drop_repeated_title(node, title: str) -> None:
+    """微信正文里作者常把标题再写一遍，页面上会重复，去掉最前面那一个。"""
+    wanted = re.sub(r"\s+", "", title)
+    for child in node.find_all(recursive=False):
+        text = re.sub(r"\s+", "", child.get_text(" ", strip=True))
+        if not text:
+            continue
+        if child.name in ("h1", "h2", "h3", "p") and text == wanted:
+            child.decompose()
+        return
 
 
 def parse(html: str) -> ParsedArticle:
@@ -129,6 +192,7 @@ def parse(html: str) -> ParsedArticle:
         raise ArticleUnavailable("页面里找不到标题")
 
     published = extract_published(html, soup)
+    _drop_repeated_title(body_node, title)
     body_html, image_urls = clean_body(body_node)
 
     return ParsedArticle(

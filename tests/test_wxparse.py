@@ -91,3 +91,65 @@ def test_parse_raises_when_body_missing():
     html = '<html><head><meta property="og:title" content="x"/></head><body></body></html>'
     with pytest.raises(wxparse.ArticleUnavailable):
         wxparse.parse(html)
+
+
+def _page(body_inner: str, title: str = "标题甲") -> str:
+    return (
+        f'<html><head><meta property="og:title" content="{title}"/></head><body>'
+        '<script>var ct = "1757174400";</script>'
+        f'<div id="js_content">{body_inner}</div>'
+        "</body></html>"
+    )
+
+
+def test_parse_drops_leading_heading_that_repeats_title():
+    article = wxparse.parse(_page("<h1>标题甲</h1><p>正文</p>"))
+    assert "标题甲" not in article.body_html
+    assert "正文" in article.body_html
+
+
+def test_parse_drops_repeated_title_ignoring_whitespace():
+    article = wxparse.parse(_page("<h1> 标题 甲 </h1><p>正文</p>"))
+    assert "<h1>" not in article.body_html
+
+
+def test_parse_keeps_leading_heading_that_differs_from_title():
+    article = wxparse.parse(_page("<h1>另一个小标题</h1><p>正文</p>"))
+    assert "另一个小标题" in article.body_html
+
+
+def test_parse_only_drops_the_first_element():
+    article = wxparse.parse(_page("<p>引言</p><h1>标题甲</h1>"))
+    assert "标题甲" in article.body_html
+
+
+def test_clean_body_strips_dark_inline_colors():
+    article = wxparse.parse(_page('<p style="color: rgb(36, 42, 38);text-indent: 2em;">正文</p>'))
+    assert "rgb(36, 42, 38)" not in article.body_html
+    assert "text-indent: 2em" in article.body_html
+
+
+def test_clean_body_strips_dark_green_heading_color():
+    article = wxparse.parse(_page('<h2 style="color: rgb(19, 64, 52);">小标题</h2>'))
+    assert "rgb(19, 64, 52)" not in article.body_html
+    assert "小标题" in article.body_html
+
+
+def test_clean_body_keeps_bright_inline_colors():
+    article = wxparse.parse(_page('<p style="color: rgb(255, 120, 0);">正文</p>'))
+    assert "rgb(255, 120, 0)" in article.body_html
+
+
+def test_clean_body_strips_dark_hex_colors():
+    article = wxparse.parse(_page('<p style="color:#242a26;">正文</p>'))
+    assert "#242a26" not in article.body_html
+
+
+def test_clean_body_drops_style_attribute_when_nothing_left():
+    article = wxparse.parse(_page('<p style="color: #000;">正文</p>'))
+    assert "style" not in article.body_html
+
+
+def test_clean_body_keeps_non_color_styles_untouched():
+    article = wxparse.parse(_page('<p style="margin: 16px 0px;">正文</p>'))
+    assert 'style="margin: 16px 0px;"' in article.body_html
