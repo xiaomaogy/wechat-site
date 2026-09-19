@@ -18,7 +18,16 @@ DELETED_MARKERS = (
     "参数错误",
 )
 
-_CT_RE = re.compile(r"var\s+(?:ct|create_time)\s*=\s*[\"'](\d{9,11})[\"']")
+# 不同年代的文章用的变量名和引号习惯都不一样：
+#   var ct = "1757174400"        新文章
+#   var oriCreateTime = 1603870767   老文章，无引号
+#   var createTime = 2020-10-28 15:39  只有格式化字符串的情况
+_CT_RE = re.compile(
+    r"var\s+(?:ct|create_time|oriCreateTime|createTime)\s*=\s*[\"']?(\d{9,11})[\"']?"
+)
+_CREATE_TIME_TEXT_RE = re.compile(
+    r"var\s+createTime\s*=\s*[\"']?(\d{4})-(\d{1,2})-(\d{1,2})"
+)
 _MSG_TITLE_RE = re.compile(r"var\s+msg_title\s*=\s*(['\"])(.*?)\1", re.S)
 _DATE_TEXT_RE = re.compile(r"(\d{4})[-年](\d{1,2})[-月](\d{1,2})")
 _WX_ID_RE = re.compile(r"/s/([A-Za-z0-9_-]+)")
@@ -51,6 +60,11 @@ def extract_published(html: str, soup: BeautifulSoup) -> str:
     if match:
         return datetime.fromtimestamp(int(match.group(1)), CST).date().isoformat()
 
+    formatted = _CREATE_TIME_TEXT_RE.search(html)
+    if formatted:
+        year, month, day = (int(part) for part in formatted.groups())
+        return f"{year:04d}-{month:02d}-{day:02d}"
+
     node = soup.find(id="publish_time")
     if node:
         text_match = _DATE_TEXT_RE.search(node.get_text(strip=True))
@@ -74,6 +88,8 @@ def slug_for(url: str, published: str) -> str:
 
 _FMT_RE = re.compile(r"wx_fmt=([A-Za-z0-9]+)")
 _KNOWN_EXTS = ("png", "gif", "webp", "jpg")
+# 2018 年前后的模板用 CSS 背景图做装饰条，这些图同样有防盗链，必须本地化。
+_STYLE_URL_RE = re.compile(r"url\((['\"]?)(https?://[^)'\"]+)\1\)")
 
 
 def image_filename(url: str) -> str:
@@ -153,6 +169,14 @@ def clean_body(node) -> tuple[str, list[str]]:
     for junk in node.find_all(["script", "style", "noscript"]):
         junk.decompose()
 
+    # 微信的视频 iframe 和公众号名片都靠它自己的 JS 渲染：iframe 的 src 是运行时
+    # 注入的，mpprofile 是自定义元素。搬到静态页面就是空白框和死标签，去掉。
+    for frame in node.find_all("iframe"):
+        if not (frame.get("src") or "").startswith("http"):
+            frame.decompose()
+    for card in node.find_all("mpprofile"):
+        card.decompose()
+
     for element in node.find_all(style=True):
         cleaned = _strip_dark_colors(element["style"])
         if cleaned is None:
@@ -173,6 +197,19 @@ def clean_body(node) -> tuple[str, list[str]]:
             urls.append(src)
         img["src"] = f"images/{image_filename(src)}"
         img["loading"] = "lazy"
+
+    for element in node.find_all(style=True):
+        style = element["style"]
+        if "url(" not in style:
+            continue
+
+        def localise(match: re.Match) -> str:
+            src = match.group(2)
+            if src not in urls:
+                urls.append(src)
+            return f'url("images/{image_filename(src)}")'
+
+        element["style"] = _STYLE_URL_RE.sub(localise, style)
 
     return node.decode_contents(), urls
 

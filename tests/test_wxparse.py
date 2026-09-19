@@ -169,3 +169,86 @@ def test_sniff_ext_recognises_svg_with_and_without_prolog():
 
 def test_sniff_ext_returns_none_when_unrecognised():
     assert wxparse.sniff_ext(b"not an image at all") is None
+
+
+def test_extract_published_reads_unquoted_ori_create_time():
+    """老文章用 var oriCreateTime = 1603870767（无引号）。"""
+    html = "var oriCreateTime = 1603870767;"
+    soup = BeautifulSoup(html, "html.parser")
+    assert wxparse.extract_published(html, soup) == "2020-10-28"
+
+
+def test_extract_published_falls_back_to_formatted_create_time():
+    """没有数字时间戳时，认 var createTime = '2020-10-28 15:39'。"""
+    html = "var createTime = '2020-10-28 15:39';"
+    soup = BeautifulSoup(html, "html.parser")
+    assert wxparse.extract_published(html, soup) == "2020-10-28"
+
+
+def test_extract_published_handles_unquoted_formatted_create_time():
+    html = "var createTime = 2020-10-28 15:39;"
+    soup = BeautifulSoup(html, "html.parser")
+    assert wxparse.extract_published(html, soup) == "2020-10-28"
+
+
+def test_extract_published_prefers_numeric_timestamp_over_formatted():
+    html = 'var ct = "1757174400";\nvar createTime = 2020-10-28 15:39;'
+    soup = BeautifulSoup(html, "html.parser")
+    assert wxparse.extract_published(html, soup) == "2025-09-07"
+
+
+BG = "https://mmbiz.qpic.cn/mmbiz_png/BG/640?wx_fmt=png"
+
+
+def test_clean_body_rewrites_background_image_urls():
+    """老模板用 CSS 背景图做装饰条，也得本地化，否则防盗链挡掉。"""
+    article = wxparse.parse(_page(f"""<section style='background-image: url("{BG}");width: 80%;'>x</section>"""))
+
+    assert BG in article.image_urls
+    assert f"images/{wxparse.image_filename(BG)}" in article.body_html
+    assert "mmbiz.qpic.cn" not in article.body_html
+    assert "width: 80%" in article.body_html
+
+
+def test_clean_body_rewrites_unquoted_background_url():
+    article = wxparse.parse(_page(f"<section style='background-image: url({BG});'>x</section>"))
+    assert f"images/{wxparse.image_filename(BG)}" in article.body_html
+
+
+def test_clean_body_leaves_data_uri_background_alone():
+    style = "background-image: url(data:image/png;base64,AAAA);"
+    article = wxparse.parse(_page(f"<section style='{style}'>x</section>"))
+    assert "data:image/png" in article.body_html
+    assert article.image_urls == []
+
+
+def test_background_image_shares_filename_with_same_img_src():
+    """同一张图既当背景又当 img 时只下载一份。"""
+    article = wxparse.parse(
+        _page(f"""<img data-src="{BG}" /><section style='background-image: url("{BG}");'>x</section>""")
+    )
+    assert article.image_urls == [BG]
+
+
+def test_clean_body_drops_iframe_without_usable_src():
+    """微信的视频 iframe 靠 JS 注入 src，静态页面里会渲染成空白框。"""
+    article = wxparse.parse(
+        _page('<p>前</p><iframe class="video_iframe" data-cover="x"></iframe><p>后</p>')
+    )
+    assert "<iframe" not in article.body_html
+    assert "前" in article.body_html
+    assert "后" in article.body_html
+
+
+def test_clean_body_keeps_iframe_with_real_src():
+    article = wxparse.parse(_page('<iframe src="https://example.com/v"></iframe>'))
+    assert "<iframe" in article.body_html
+
+
+def test_clean_body_drops_wechat_profile_card():
+    """<mpprofile> 是微信自定义元素，静态页里是个死标签。"""
+    article = wxparse.parse(
+        _page('<mpprofile data-headimg="http://mmbiz.qpic.cn/x">卡片</mpprofile><p>正文</p>')
+    )
+    assert "mpprofile" not in article.body_html
+    assert "正文" in article.body_html
