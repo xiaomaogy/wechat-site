@@ -1,0 +1,10 @@
+{
+  // 纯静态站：没有 Worker 脚本，只把 dist/ 作为静态资源发布。
+  // Cloudflare 后台 Worker → Settings → Build 里连上 Git 之后，
+  // 每次 push 到 main 会跑 `npx wrangler deploy`，读的就是这个文件。
+  "name": "wechat-site",
+  "compatibility_date": "2026-09-19",
+  "assets": {
+    "directory": "./dist"
+  }
+}

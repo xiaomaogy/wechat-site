@@ -35,3 +35,10 @@ cd dist && python3 -m http.server 8899   # 本地预览
 - 绑域名的位置是 **Worker → Settings → Domains & Routes → Add → Custom domain**，
   不是 Pages 的 Custom domains 页面
 - 静态资源目录是 `dist`
+
+部署配置在 `wrangler.jsonc`（`assets.directory = ./dist`）。两条部署路径：
+
+- **接了 Git**：push 到 `main` → Workers Builds 跑 `npx wrangler deploy`
+- **手动兜底**：本地 `npx wrangler deploy`（首次会开浏览器让你授权 Cloudflare）
+
+改配置后可以用 `npx wrangler deploy --dry-run` 校验，这条不需要登录。
