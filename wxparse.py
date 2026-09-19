@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -69,3 +70,72 @@ def wx_id(url: str) -> str:
 
 def slug_for(url: str, published: str) -> str:
     return f"{published}-{wx_id(url)}"
+
+
+_FMT_RE = re.compile(r"wx_fmt=([A-Za-z0-9]+)")
+_KNOWN_EXTS = ("png", "gif", "webp", "jpg")
+
+
+def image_filename(url: str) -> str:
+    """图片落地后的文件名。用 URL 的 sha1 前 12 位，保证同一张图只存一份。"""
+    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
+
+    match = _FMT_RE.search(url)
+    ext = match.group(1).lower() if match else url.rsplit(".", 1)[-1].lower()
+    if ext == "jpeg":
+        ext = "jpg"
+    if ext not in _KNOWN_EXTS:
+        ext = "jpg"
+
+    return f"{digest}.{ext}"
+
+
+def clean_body(node) -> tuple[str, list[str]]:
+    """去掉噪声标签，把图片指向本地 images/，返回（HTML, 原始图片 URL 列表）。"""
+    for junk in node.find_all(["script", "style", "noscript"]):
+        junk.decompose()
+
+    urls: list[str] = []
+    for img in node.find_all("img"):
+        src = (img.get("data-src") or img.get("src") or "").strip()
+        img.attrs.pop("data-src", None)
+        if not src.startswith("http"):
+            img.decompose()
+            continue
+        if src not in urls:
+            urls.append(src)
+        img["src"] = f"images/{image_filename(src)}"
+        img["loading"] = "lazy"
+
+    return node.decode_contents(), urls
+
+
+def parse(html: str) -> ParsedArticle:
+    for marker in DELETED_MARKERS:
+        if marker in html:
+            raise ArticleUnavailable(f"页面提示：{marker}")
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    body_node = soup.find(id="js_content")
+    if body_node is None:
+        raise ArticleUnavailable("页面里找不到正文 #js_content，可能需要验证或链接已失效")
+
+    title = _meta(soup, "og:title")
+    if not title:
+        title_match = _MSG_TITLE_RE.search(html)
+        title = title_match.group(2).strip() if title_match else ""
+    if not title:
+        raise ArticleUnavailable("页面里找不到标题")
+
+    published = extract_published(html, soup)
+    body_html, image_urls = clean_body(body_node)
+
+    return ParsedArticle(
+        title=title,
+        author=_meta(soup, "og:article:author"),
+        published=published,
+        cover_url=_meta(soup, "og:image"),
+        body_html=body_html,
+        image_urls=image_urls,
+    )
